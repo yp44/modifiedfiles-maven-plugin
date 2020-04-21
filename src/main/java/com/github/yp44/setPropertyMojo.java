@@ -48,7 +48,7 @@ public class setPropertyMojo extends AbstractMojo {
     private List<String> extensionsList = null;
 
     // List of method called to retrieve file list from jgist.Status
-    // http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/index.html
+    // http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/org/eclipse/jgit/api/Status.html
     @Parameter
     private String gitStatusElements = "modified,uncommittedChanges,untracked";
 

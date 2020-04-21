@@ -36,7 +36,7 @@ Here available configuration:
     * Useful with spotless since *empty string* in *spotlessFiles* means all files. For Spotless could be set to *THIS_IS_EMPTY_LIST_PATTERN*.
     * Default : empty string
 * **gitStatusElements** : add files from git status given elements (comma separated).
-    * Can be any method name *Set<String> getXXX()* from : http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/index.html
+    * Can be any method name *Set<String> getXXX()* from : http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/org/eclipse/jgit/api/Status.html
     * Default : modified,uncommittedChanges,untracked
 
 Example to format only modified source code with spotless plugin:
