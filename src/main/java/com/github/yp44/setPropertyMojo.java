@@ -1,4 +1,4 @@
-package org.talend.components;
+package com.github.yp44;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -124,7 +124,7 @@ public class setPropertyMojo extends AbstractMojo {
         if (extensionsList == null) {
             extensionsList = Arrays.asList(extensions.split(","));
         }
-        
+
         for (String ext : extensionsList) {
             if (f.endsWith(ext)) {
                 return true;
