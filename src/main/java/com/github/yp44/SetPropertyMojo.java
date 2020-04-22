@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Stream.concat;
 
 @Mojo(name = "set-property")
-public class setPropertyMojo extends AbstractMojo {
+public class SetPropertyMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
