@@ -1,5 +1,16 @@
 package com.github.yp44;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -11,18 +22,6 @@ import org.eclipse.jgit.api.StatusCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
-
-import static java.util.stream.Stream.concat;
 
 @Mojo(name = "set-property")
 public class SetPropertyMojo extends AbstractMojo {
@@ -50,7 +49,7 @@ public class SetPropertyMojo extends AbstractMojo {
     // List of method called to retrieve file list from jgist.Status
     // http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/org/eclipse/jgit/api/Status.html
     @Parameter
-    private String gitStatusElements = "modified,uncommittedChanges,untracked";
+    private String gitStatusElements = "modified,uncommittedChanges,changed";
 
     public void execute() throws MojoExecutionException {
         getLog().info("Set modified files list");
@@ -73,50 +72,55 @@ public class SetPropertyMojo extends AbstractMojo {
     }
 
     private String getGitModifiedFiles() throws MojoExecutionException {
-        final File gitPath = project.getBasedir().toPath().resolve(".git").toFile();
+        final MavenProject root = this.findRoot();
 
+        final String moduleName = project.getBasedir().getName();
+        final File gitPath = root.getBasedir().toPath().resolve(".git").toFile();
+        getLog().info("Git path " + gitPath.getAbsolutePath() + "   base dir " + project.getBasedir().getName());
         final FileRepositoryBuilder builder = new FileRepositoryBuilder();
-        final Repository repo;
-        try {
-            repo = builder.setGitDir(gitPath).build();
-            Git git = new Git(repo);
+
+        try (final Repository repo = builder.setGitDir(gitPath).build();
+             Git git = new Git(repo)) {
 
             final StatusCommand status = git.status();
             final Status call = status.call();
 
-            final StringBuilder files = new StringBuilder();
+            String sfiles = Arrays.stream(gitStatusElements.split(","))
+                    .map((String name) -> retrieveFiles(call, name))
+                    .flatMap(Set::stream)
+                    .filter(this::accept)
+                    .distinct()
+                    .map((String rel) -> this.toAbsolute(rel, root))
+                    .collect(Collectors.joining(","));
 
-            Stream<String> stream = Stream.empty();
-            List<String> elementsSource = Arrays.asList(gitStatusElements.split(","));
-
-            for (String method : elementsSource) {
-                try {
-                    method = method.substring(0, 1).toUpperCase() + method.substring(1);
-                    final Method m = call.getClass().getMethod("get" + method);
-                    Set<String> ff = (Set<String>) m.invoke(call);
-                    stream = concat(stream, ff.stream());
-                    getLog().debug("Get git status " + method + " list : " + ff.stream().map(this::toAbsolute).map(f -> "\n" + f).reduce("", (a, f) -> a + f));
-                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                }
+            if (sfiles.isEmpty()) {
+                sfiles = "unexistingFile0001.xml";
             }
-
-            stream.filter(this::accept)
-                    .map(this::toAbsolute)
-                    .forEach(f -> files.append(f).append(","));
-            String sfiles = files.toString();
-
-            if (!sfiles.isEmpty()) {
-                sfiles = sfiles.substring(0, sfiles.length() - 1);
-            }
-
-            git.close();
-            repo.close();
 
             return sfiles;
 
         } catch (IOException | GitAPIException e) {
             throw new MojoExecutionException(e.getMessage(), e);
+        }
+    }
+
+    private MavenProject findRoot() {
+        MavenProject root = this.project;
+        while (root.getParent() != null && root.getParent() != root) {
+            root = root.getParent();
+        }
+        return root;
+    }
+
+    private Set<String> retrieveFiles(Status status, String propName) {
+        try {
+            final String getterName = "get" + propName.substring(0, 1).toUpperCase() + propName.substring(1);
+            final Method m = status.getClass().getMethod(getterName);
+            return (Set<String>) m.invoke(status);
+        }
+        catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+            return Collections.emptySet();
         }
     }
 
@@ -133,8 +137,8 @@ public class SetPropertyMojo extends AbstractMojo {
         return false;
     }
 
-    private String toAbsolute(final String f) {
-        final String projectFolder = this.project.getBasedir().getAbsolutePath();
+    private String toAbsolute(final String f, MavenProject root) {
+        final String projectFolder = root.getBasedir().getAbsolutePath();
         return Paths.get(projectFolder, f).toString();
     }
 
