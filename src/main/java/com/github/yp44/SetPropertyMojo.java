@@ -74,7 +74,6 @@ public class SetPropertyMojo extends AbstractMojo {
     private String getGitModifiedFiles() throws MojoExecutionException {
         final MavenProject root = this.findRoot();
 
-        final String moduleName = project.getBasedir().getName();
         final File gitPath = root.getBasedir().toPath().resolve(".git").toFile();
         getLog().info("Git path " + gitPath.getAbsolutePath() + "   base dir " + project.getBasedir().getName());
         final FileRepositoryBuilder builder = new FileRepositoryBuilder();
@@ -94,7 +93,7 @@ public class SetPropertyMojo extends AbstractMojo {
                     .collect(Collectors.joining(","));
 
             if (sfiles.isEmpty()) {
-                sfiles = "unexistingFile0001.xml";
+                sfiles = "";
             }
 
             return sfiles;
