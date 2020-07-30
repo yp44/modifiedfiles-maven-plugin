@@ -41,8 +41,8 @@ public class SetPropertyMojo extends AbstractMojo {
     @Parameter
     private String emptyListValue = "";
 
-    @Parameter(defaultValue = "java,xml")
-    private String extensions;
+    @Parameter(defaultValue = "java")
+    private String extensions = "java";
 
     private List<String> extensionsList = null;
 
@@ -51,6 +51,7 @@ public class SetPropertyMojo extends AbstractMojo {
     @Parameter
     private String gitStatusElements = "modified,uncommittedChanges,changed";
 
+    @Override
     public void execute() throws MojoExecutionException {
         getLog().info("Set modified files list");
         getLog().info("Accepted extension : " + extensions);
@@ -89,7 +90,6 @@ public class SetPropertyMojo extends AbstractMojo {
                     .flatMap(Set::stream)
                     .filter(this::accept)
                     .distinct()
-                    .map((String rel) -> this.toAbsolute(rel, root))
                     .collect(Collectors.joining(","));
 
             if (sfiles.isEmpty()) {
@@ -134,11 +134,6 @@ public class SetPropertyMojo extends AbstractMojo {
             }
         }
         return false;
-    }
-
-    private String toAbsolute(final String f, MavenProject root) {
-        final String projectFolder = root.getBasedir().getAbsolutePath();
-        return Paths.get(projectFolder, f).toString();
     }
 
 }
