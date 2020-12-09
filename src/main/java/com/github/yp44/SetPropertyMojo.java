@@ -67,9 +67,17 @@ public class SetPropertyMojo extends AbstractMojo {
             list = getGitModifiedFiles();
         }
 
-        project.getProperties().setProperty(propertyName, list);
+        this.getRoot(project).getProperties().setProperty(propertyName, list);
         getLog().info("Set property " + propertyName + " with files list : " + list);
 
+    }
+
+    private MavenProject getRoot(MavenProject project) {
+        MavenProject current = project;
+        while (current.getParent() != null && current.getParent() != current) {
+            current = current.getParent();
+        }
+        return current;
     }
 
     private String getGitModifiedFiles() throws MojoExecutionException {
