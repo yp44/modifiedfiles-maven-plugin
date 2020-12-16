@@ -41,15 +41,15 @@ public class SetPropertyMojo extends AbstractMojo {
     @Parameter
     private String emptyListValue = "";
 
-    @Parameter(defaultValue = "java")
-    private String extensions = "java";
+    @Parameter(defaultValue = "java,xml")
+    private String extensions = "java,xml";
 
     private List<String> extensionsList = null;
 
     // List of method called to retrieve file list from jgist.Status
     // http://download.eclipse.org/jgit/site/5.7.0.202003110725-r/apidocs/org/eclipse/jgit/api/Status.html
     @Parameter
-    private String gitStatusElements = "modified,uncommittedChanges,changed";
+    private String gitStatusElements = "modified";
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -67,7 +67,7 @@ public class SetPropertyMojo extends AbstractMojo {
             list = getGitModifiedFiles();
         }
 
-        this.getRoot(project).getProperties().setProperty(propertyName, list);
+        project.getProperties().setProperty(propertyName, list);
         getLog().info("Set property " + propertyName + " with files list : " + list);
 
     }
@@ -98,6 +98,7 @@ public class SetPropertyMojo extends AbstractMojo {
                     .flatMap(Set::stream)
                     .filter(this::accept)
                     .distinct()
+                    .map(f -> root.getBasedir().toPath().resolve(f).toFile().getAbsolutePath())
                     .collect(Collectors.joining(","));
 
             if (sfiles.isEmpty()) {
