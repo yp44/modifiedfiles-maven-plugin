@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.AbstractMojo;
@@ -25,6 +26,8 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 @Mojo(name = "set-property")
 public class SetPropertyMojo extends AbstractMojo {
+
+    private final static AtomicReference<Status> first_status = new AtomicReference<>();
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -43,6 +46,10 @@ public class SetPropertyMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "java,xml")
     private String extensions = "java,xml";
+
+    // if false, it get 'status' retrieve got status from static
+    @Parameter(defaultValue = "false")
+    private boolean forceGitStatus;
 
     private List<String> extensionsList = null;
 
@@ -68,6 +75,7 @@ public class SetPropertyMojo extends AbstractMojo {
         }
 
         project.getProperties().setProperty(propertyName, list);
+        this.getRoot(project).getProperties().setProperty(propertyName, list);
         getLog().info("Set property " + propertyName + " with files list : " + list);
 
     }
@@ -90,9 +98,19 @@ public class SetPropertyMojo extends AbstractMojo {
         try (final Repository repo = builder.setGitDir(gitPath).build();
              Git git = new Git(repo)) {
 
-            final StatusCommand status = git.status();
-            final Status call = status.call();
 
+
+            final StatusCommand status = git.status();
+            Status status_call = SetPropertyMojo.first_status.get();
+            if(status_call == null){
+                status_call = status.call();
+                SetPropertyMojo.first_status.set(status_call);
+            }
+            else if(forceGitStatus){
+                status_call = status.call();
+            }
+
+            final Status call = status_call;
             String sfiles = Arrays.stream(gitStatusElements.split(","))
                     .map((String name) -> retrieveFiles(call, name))
                     .flatMap(Set::stream)
@@ -100,10 +118,6 @@ public class SetPropertyMojo extends AbstractMojo {
                     .distinct()
                     .map(f -> root.getBasedir().toPath().resolve(f).toFile().getAbsolutePath())
                     .collect(Collectors.joining(","));
-
-            if (sfiles.isEmpty()) {
-                sfiles = "";
-            }
 
             return sfiles;
 
